@@ -271,7 +271,7 @@ def get_bin_info(bin_number):
         if response.status_code == 200:
             data = response.json()
             
-            # Check if we have valid data from the new API
+            # Check for valid data
             if not data or data.get('status') != 'SUCCESS' or not data.get('data'):
                 return {
                     'brand': 'UNKNOWN',
@@ -282,19 +282,30 @@ def get_bin_info(bin_number):
                     'emoji': '🏳️'
                 }
 
-            bin_data = data['data'][0] # Get the first item from the 'data' list
+            bin_data = data['data'][0]
             country_info = bin_data.get('Country', {})
+            country_name = country_info.get('Name', 'UNKNOWN')
+            country_code = country_info.get('A2', None)
 
-            # Return data mapped from the new API response
+            # Function to get flag emoji from country code
+            def get_flag_emoji(code):
+                if not code or len(code) != 2:
+                    return '🏳️'
+                return ''.join([chr(0x1F1E6 + ord(c) - ord('A')) for c in code.upper()])
+
+            emoji = get_flag_emoji(country_code)
+
+            # Return the mapped data
             return {
                 'brand': bin_data.get('brand', 'UNKNOWN'),
                 'type': bin_data.get('type', 'UNKNOWN'),
                 'level': bin_data.get('CardTier', 'UNKNOWN'),
                 'bank': bin_data.get('issuer', 'UNKNOWN'),
-                'country': country_info.get('Name', 'UNKNOWN'),
-                'emoji': f"https://flagsapi.com/{country_info.get('A2', 'AI')}/flat/64.png"
+                'country': country_name,
+                'emoji': emoji
             }
         
+        # Handle non-200 status codes
         return {
             'brand': 'UNKNOWN',
             'type': 'UNKNOWN',
@@ -314,7 +325,6 @@ def get_bin_info(bin_number):
             'country': 'UNKNOWN',
             'emoji': '🏳️'
         }
-
 def check_status(result):
     # First, check if the message contains "Reason:" and extract the specific reason
     if "Reason:" in result:
@@ -565,4 +575,5 @@ def check_card(cc_line):
 
 # Add these lines right after the imports to properly handle Unicode output
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
 
