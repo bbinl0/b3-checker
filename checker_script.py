@@ -266,12 +266,13 @@ def get_new_auth():
 
 def get_bin_info(bin_number):
     try:
-        response = requests.get(f'https://api.voidex.dev/api/bin?bin={bin_number}', timeout=10)
+        response = requests.get(f'https://bin-db.vercel.app/api/bin?bin={bin_number}', timeout=10)
+        
         if response.status_code == 200:
             data = response.json()
-
-            # Check if we have valid data
-            if not data or 'brand' not in data:
+            
+            # Check if we have valid data from the new API
+            if not data or data.get('status') != 'SUCCESS' or not data.get('data'):
                 return {
                     'brand': 'UNKNOWN',
                     'type': 'UNKNOWN',
@@ -281,16 +282,19 @@ def get_bin_info(bin_number):
                     'emoji': '🏳️'
                 }
 
-            # Return data mapped from Voidex API response
-            return {
-                'brand': data.get('brand', 'UNKNOWN'),
-                'type': data.get('type', 'UNKNOWN'),
-                'level': data.get('brand', 'UNKNOWN'),  # Using brand as level fallback
-                'bank': data.get('bank', 'UNKNOWN'),
-                'country': data.get('country_name', 'UNKNOWN'),
-                'emoji': data.get('country_flag', '🏳️')
-            }
+            bin_data = data['data'][0] # Get the first item from the 'data' list
+            country_info = bin_data.get('Country', {})
 
+            # Return data mapped from the new API response
+            return {
+                'brand': bin_data.get('brand', 'UNKNOWN'),
+                'type': bin_data.get('type', 'UNKNOWN'),
+                'level': bin_data.get('CardTier', 'UNKNOWN'),
+                'bank': bin_data.get('issuer', 'UNKNOWN'),
+                'country': country_info.get('Name', 'UNKNOWN'),
+                'emoji': f"https://flagsapi.com/{country_info.get('A2', 'AI')}/flat/64.png"
+            }
+        
         return {
             'brand': 'UNKNOWN',
             'type': 'UNKNOWN',
@@ -299,6 +303,7 @@ def get_bin_info(bin_number):
             'country': 'UNKNOWN',
             'emoji': '🏳️'
         }
+    
     except Exception as e:
         print(f"BIN lookup error: {str(e)}")
         return {
@@ -560,3 +565,4 @@ def check_card(cc_line):
 
 # Add these lines right after the imports to properly handle Unicode output
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
